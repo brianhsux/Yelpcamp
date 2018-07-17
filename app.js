@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 var express     = require("express"),
     app         = express(),
     bodyParser  = require("body-parser"),
@@ -16,7 +18,7 @@ var commentRoutes = require("./routes/comments"),
     campgroundRoutes = require("./routes/campgrounds"),
     indexRoutes = require("./routes/index");
 
-var databaseUrl = process.env.DATABASEURL || "mongodb://localhost/yelp_camp_v11_1";
+var databaseUrl = process.env.DATABASEURL || "mongodb://localhost/yelp_camp_v12";
 mongoose.connect(databaseUrl);
 // mongoose.connect("mongodb://localhost/yelp_camp_v11_1");
 // mongoose.connect("mongodb://brianhsux:yelp1007@ds233531.mlab.com:33531/yelpcampcamp");

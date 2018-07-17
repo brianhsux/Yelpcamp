@@ -2,6 +2,27 @@ var express = require("express")
 var router = express.Router();
 var Campground  = require("../models/campground");
 var middleware = require("../middleware")
+var multer = require('multer');
+var storage = multer.diskStorage({
+  filename: function(req, file, callback) {
+    callback(null, Date.now() + file.originalname);
+  }
+});
+var imageFilter = function (req, file, cb) {
+    // accept image files only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+};
+var upload = multer({ storage: storage, fileFilter: imageFilter})
+
+var cloudinary = require('cloudinary');
+cloudinary.config({ 
+    cloud_name: 'brianhsux', 
+    api_key: process.env.CLOUDINARY_API_KEY, 
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 router.get("/", function(req, res) {
     // find the camgrounds from DB
@@ -17,33 +38,26 @@ router.get("/", function(req, res) {
     });
 });
 
-router.post("/", middleware.isLoggedIn, function(req, res) {
-    var name = req.body.name;
-    var price = req.body.price;
-    var image = req.body.image;
-    var description = req.body.description;
-    var author = {
+router.post("/", middleware.isLoggedIn, upload.single('image'), function(req, res) {
+    cloudinary.uploader.upload(req.file.path, function(result) {
+        console.log("=====Uploader=====");
+        console.log(result);
+        // add cloudinary url for the image to the campground object under image property
+        req.body.campground.image = result.secure_url;
+        // add author to campground
+        req.body.campground.author = {
         id: req.user._id,
         username: req.user.username
-    };
-    
-    var newCampground = {name: name, price: price, image: image, description: description, author: author};
-    // campgrounds.push(newCampground);
-    
-    console.log(newCampground);
-    
-    Campground.create(newCampground, function(err, campground) {
-        if (err) {
-            req.flash("error", "Something went wrong");
-            console.log(err);
-        } else {
-            console.log("Create campground successful, congrats!!!");
-            req.flash("success", "Successfully added Campground");
-            console.log(campground);
         }
+        
+        Campground.create(req.body.campground, function(err, campground) {
+        if (err) {
+          req.flash('error', err.message);
+          return res.redirect('back');
+        }
+        res.redirect('/campgrounds/' + campground.id);
+        });
     });
-    
-    res.redirect("/campgrounds");
 });
 
 router.get("/new", middleware.isLoggedIn, function(req, res) {
